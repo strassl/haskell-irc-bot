@@ -8,6 +8,10 @@ import Text.Printf
 
 import IRC
 
+data Command = Command { action :: String
+                       , args   :: [String]
+                       } deriving Show
+
 server = "irc.freenode.org"
 port = 6667
 chan = "#hbot-test"
@@ -43,13 +47,28 @@ processLine h s
         msg = parse s
 
 eval :: Handle -> Message -> IO ()
-eval h m = putStrLn (compose m)
+eval h m
+    | isBotCommand m = processBotCommand h m
+    | otherwise = putStrLn (compose m)
 
---isBotCommand :: String -> Bool
---isBotCommand s = 
+isBotCommand :: Message -> Bool
+isBotCommand m = ("!" ++ nick) `isPrefixOf` s
+    where
+        s = trailing m
 
---processBotCommand :: Handle -> String -> IO ()
---processBotCommand h s = 
+processBotCommand :: Handle -> Message -> IO ()
+processBotCommand h m
+    | act == "SAY" = write h (Message "" "PRIVMSG" [chan] (intercalate " " (args c)))
+    | otherwise = write h (Message "" "PRIVMSG" [chan] ("I'm sorry, " ++ prefix m ++ ". I'm afraid I can't do that."))
+    where
+        act = action c
+        c = parseCommand m
+
+parseCommand :: Message -> Command
+parseCommand m = Command (head arguments) (tail arguments)
+    where
+        arguments = drop 1 (words str)
+        str = trailing m
 
 isPing :: Message -> Bool
 isPing m = (command m) == "PING"
