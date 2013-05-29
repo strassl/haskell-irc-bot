@@ -15,7 +15,7 @@ parse s = Message prefix command params trailing
         prefix = drop 1 $ if hasPrefix (head split) then head split else ""
         command = bare !! 0
         params = takeWhile (not . hasPrefix) (drop 1 bare)
-        trailing = drop 1 $ concat $ dropWhile (not . hasPrefix) (drop 1 bare)
+        trailing = drop 1 $ intercalate " " $ dropWhile (not . hasPrefix) (drop 1 bare)
         bare = if hasPrefix (head split) then drop 1 split else split
         split = words s
 
