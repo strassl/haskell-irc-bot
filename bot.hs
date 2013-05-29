@@ -39,7 +39,7 @@ processLine h s
     | otherwise = eval h msg
     where 
         pong = Message "" "PONG" [server] ""
-        server = head (params msg)
+        server = head $ words $ trailing msg
         msg = parse s
 
 eval :: Handle -> Message -> IO ()
