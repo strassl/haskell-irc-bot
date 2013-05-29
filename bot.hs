@@ -11,7 +11,7 @@ import IRC
 server = "irc.freenode.org"
 port = 6667
 chan = "#hbot-test"
-nick = "haskell-botty"
+nick = "hbotty"
 
 main = do
     h <- connectTo server (PortNumber (fromIntegral port))
