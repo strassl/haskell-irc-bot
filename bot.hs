@@ -20,9 +20,9 @@ nick = "hbotty"
 main = do
     h <- connectTo server (PortNumber (fromIntegral port))
     hSetBuffering h NoBuffering
-    write h (Message "" "NICK" [nick] "")
-    write h (Message "" "USER" [nick, "0", "*"] "haskell bot")
-    write h (Message "" "JOIN" [chan] "")
+    write h (cmdNick nick)
+    write h (cmdUser nick)
+    write h (cmdJoin chan)
     listen h
 
 write :: Handle -> Message -> IO ()
@@ -39,10 +39,9 @@ listen h = forever $ do
 
 processLine :: Handle -> String -> IO ()
 processLine h s
-    | isPing msg = write h pong
+    | isPing msg = write h cmdPong
     | otherwise = eval h msg
     where 
-        pong = Message "" "PONG" [server] ""
         server = head $ words $ trailing msg
         msg = parse s
 
@@ -58,7 +57,8 @@ isBotCommand m = ("!" ++ nick) `isPrefixOf` s
 
 processBotCommand :: Handle -> Message -> IO ()
 processBotCommand h m
-    | act == "SAY" = write h (Message "" "PRIVMSG" [chan] (intercalate " " (args c)))
+    | act == "SAY" = write h (cmdMsg chan (intercalate " " (args c)))
+    | act == "QUIT" = write h (cmdQuit "Going down!")
     | otherwise = write h (Message "" "PRIVMSG" [chan] ("I'm sorry, " ++ prefix m ++ ". I'm afraid I can't do that."))
     where
         act = action c
@@ -76,3 +76,17 @@ parseCommand m = parseArgs arguments
 
 isPing :: Message -> Bool
 isPing m = (command m) == "PING"
+
+-- Common IRC commands
+
+cmdNick n = Message "" "NICK" [n] ""
+
+cmdUser n = Message "" "USER" [nick, "0", "*"] "bot"
+
+cmdJoin c = Message "" "JOIN" [c] ""
+
+cmdQuit m = Message "" "QUIT" [m] ""
+
+cmdMsg r m = Message "" "PRIVMSG" [r] m
+
+cmdPong = Message "" "PONG" [server] ""
