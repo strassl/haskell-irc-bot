@@ -15,7 +15,8 @@ data Command = Command { action :: String
                        , args   :: [String]
                        } deriving Show
 
-data Bot = Bot { socket :: Handle }
+data Bot = Bot { socket :: Handle 
+               , active :: Bool }
 
 type Net = ReaderT Bot IO
 
@@ -24,10 +25,12 @@ port = 6667
 chan = "#hbot-test"
 nick = "hbotty"
 
-
+-- bracket <before> <after> <in between>
 main = bracket connect disconnect loop
     where
         loop st = runReaderT run st
+        
+-- Network stuff
 
 connect :: IO Bot
 connect = do 
@@ -35,6 +38,7 @@ connect = do
     hSetBuffering h NoBuffering
     return (Bot h)
 
+disconnect :: Bot -> IO ()
 disconnect = hClose . socket
 
 run :: Net ()
@@ -44,6 +48,11 @@ run = do
     write (cmdJoin chan)
     asks socket >>= listen
 
+listen :: Handle -> Net ()
+listen h = forever $ do
+        l <- liftIO $ hGetLine h
+        liftIO $ putStrLn l
+        processLine l
 
 write :: Message -> Net ()
 write m = do
@@ -53,11 +62,7 @@ write m = do
     where
         str = compose m ++ "\r\n"
 
-listen :: Handle -> Net ()
-listen h = forever $ do
-        l <- liftIO $ hGetLine h
-        liftIO $ putStrLn l
-        processLine l
+-- Text processing
 
 processLine :: String -> Net ()
 processLine s
@@ -71,6 +76,8 @@ eval :: Message -> Net ()
 eval m
     | isBotCommand m = processBotCommand m
     | otherwise = return ()
+
+-- Bot command processing
 
 isBotCommand :: Message -> Bool
 isBotCommand m = ("!" ++ nick) `isPrefixOf` s
@@ -96,9 +103,6 @@ parseCommand m = parseArgs arguments
         parseArgs [x] = Command x []
         parseArgs (x:xs) = Command x xs
 
-isPing :: Message -> Bool
-isPing m = (command m) == "PING"
-
 -- Common IRC commands
 
 cmdNick n = Message "" "NICK" [n] ""
@@ -112,3 +116,6 @@ cmdQuit m = Message "" "QUIT" [m] ""
 cmdMsg r m = Message "" "PRIVMSG" [r] m
 
 cmdPong = Message "" "PONG" [server] ""
+
+isPing :: Message -> Bool
+isPing m = (command m) == "PING"
