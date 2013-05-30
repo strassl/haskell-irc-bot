@@ -1,10 +1,14 @@
+{-# LANGUAGE OverloadedStrings #-}
+
 import Control.Arrow
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
 import Control.Exception
+import qualified Data.ByteString as B
 import Data.Char
 import Data.List
+import qualified Database.PostgreSQL.Simple as PQ
 import Network
 import System.IO
 import System.Exit
@@ -18,6 +22,7 @@ data Command = Command { action :: String
 
 data Bot = Bot { socket :: Handle 
                , operators :: [String]
+               , db :: PQ.Connection
                }
 
 type Net = ReaderT Bot IO
@@ -40,8 +45,9 @@ connect :: IO Bot
 connect = do 
     ops <- getOperators
     h <- connectTo server (PortNumber (fromIntegral port))
+    c <- connectDB
     hSetBuffering h NoBuffering
-    return (Bot h ops)
+    return (Bot h ops c)
 
 disconnect :: Bot -> IO ()
 disconnect = hClose . socket
@@ -66,6 +72,13 @@ write m = do
     liftIO $ printf    str
     where
         str = compose m ++ "\r\n"
+
+-- Database stuff
+
+connectDB :: IO PQ.Connection
+connectDB = PQ.connect info
+    where
+        info = PQ.defaultConnectInfo { PQ.connectUser = "bot", PQ.connectDatabase = "bot" }
 
 -- Operator processing
 
