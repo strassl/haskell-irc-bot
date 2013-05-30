@@ -1,8 +1,8 @@
-module IRC (Message (..), User (..), parse, compose, isUserPrefix, parseUser) where
+module IRC (Message (..), User (..), parse, compose, parseUser) where
 
 import Data.Char
 import Data.List
-import Data.Text as T
+import Data.Text as T (Text, pack, unpack,  split)
 
 data Message = Message { prefix :: String
                        , command :: String
@@ -37,10 +37,10 @@ hasPrefix s = head s == ':'
 isUserPrefix :: String -> Bool
 isUserPrefix = elem '!'
 
-parseUser :: String -> User
-parseUser s = User n u h
+parseUser :: String -> Maybe User
+parseUser s = if isUserPrefix s then Just (User n u h) else Nothing
     where
         n = head l
         u = l !! 1
         h = last l
-        l = split (flip elem "!@") (pack s)
+        l = map unpack $ split (flip elem "!@") (pack s)
