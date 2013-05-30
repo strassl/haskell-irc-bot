@@ -12,7 +12,8 @@ data Message = Message { prefix :: String
 
 data User = User { nick :: String
                  , user :: String
-                 , host :: String }
+                 , host :: String
+                 } deriving Show
 
 parse :: String -> Message
 parse s = Message prefix command params trailing
