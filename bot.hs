@@ -35,6 +35,7 @@ write h m = do
 listen :: Handle -> IO ()
 listen h = forever $ do
         l <- hGetLine h
+        putStrLn l
         processLine h l
 
 processLine :: Handle -> String -> IO ()
@@ -48,7 +49,7 @@ processLine h s
 eval :: Handle -> Message -> IO ()
 eval h m
     | isBotCommand m = processBotCommand h m
-    | otherwise = putStrLn (compose m)
+    | otherwise = return ()
 
 isBotCommand :: Message -> Bool
 isBotCommand m = ("!" ++ nick) `isPrefixOf` s
