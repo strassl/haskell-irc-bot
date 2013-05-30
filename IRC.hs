@@ -1,13 +1,18 @@
-module IRC (Message (..), parse, compose) where
+module IRC (Message (..), User (..), parse, compose, isUserPrefix, parseUser) where
 
 import Data.Char
 import Data.List
+import Data.Text as T
 
 data Message = Message { prefix :: String
                        , command :: String
                        , params :: [String]
                        , trailing :: String
                        } deriving Show
+
+data User = User { nick :: String
+                 , user :: String
+                 , host :: String }
 
 parse :: String -> Message
 parse s = Message prefix command params trailing
@@ -25,7 +30,17 @@ compose m = intercalate " " $ filter (/="") [preStr, command m, paraStr, trailSt
         preStr = if (length $ prefix m) > 0 then ':' : (prefix m) else ""
         paraStr = intercalate " " (params m)
         trailStr = if (length $ trailing m) > 0 then ':' : (trailing m) else ""
-      
 
 hasPrefix :: String -> Bool
 hasPrefix s = head s == ':'
+
+isUserPrefix :: String -> Bool
+isUserPrefix = elem '!'
+
+parseUser :: String -> User
+parseUser s = User n u h
+    where
+        n = head l
+        u = l !! 1
+        h = last l
+        l = split (flip elem "!@") (pack s)
