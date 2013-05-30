@@ -65,10 +65,15 @@ processBotCommand h m
         c = parseCommand m
 
 parseCommand :: Message -> Command
-parseCommand m = Command (head arguments) (tail arguments)
+parseCommand m = argsToCommand arguments
     where
         arguments = drop 1 (words str)
         str = trailing m
+
+argsToCommand :: [String] -> Command
+argsToCommand [] = Command "" []
+argsToCommand [x] = Command x []
+argsToCommand (x:xs) = Command x xs
 
 isPing :: Message -> Bool
 isPing m = (command m) == "PING"
