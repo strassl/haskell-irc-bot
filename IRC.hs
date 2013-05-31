@@ -1,4 +1,4 @@
-module IRC (Message (..), User (..), parse, compose, parseUser) where
+module IRC (Message (..), User (..), parse, compose, isUserPrefix, parseUser) where
 
 import Data.Char
 import Data.List

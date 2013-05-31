@@ -75,6 +75,22 @@ write m = do
     where
         str = compose m ++ "\r\n"
 
+-- Logging
+
+logFilter :: [String]
+logFilter = [ "Excess Flood", "Client Quit", "Remote host closed", "*.net *.split", "Read error"
+            , "Ping timeout", "Quit:" ]
+
+shouldLog :: Message -> Bool
+shouldLog m = (isUserPrefix $ prefix m) && (not $ isEmpty (trailing m)) &&(not $ or (map lFilter logFilter))
+    where
+        lFilter = flip isInfixOf (trailing m)
+
+logLine :: Message -> IO ()
+logLine m
+    | shouldLog m = appendFile (chan ++ "_log.txt") ((trailing m) ++ "\n")
+    | otherwise = return ()
+
 -- Database stuff
 
 connectDB :: IO PQ.Connection
@@ -115,6 +131,7 @@ processLine s
 eval :: Message -> Net ()
 eval m = do
     isOp <- isOperator m
+    liftIO $ logLine m
 
     if isOp && isBotCommand m then processBotCommand m else return ()
 
