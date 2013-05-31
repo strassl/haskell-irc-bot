@@ -82,9 +82,10 @@ logFilter = [ "Excess Flood", "Client Quit", "Remote host closed", "*.net *.spli
             , "Ping timeout", "Quit:" ]
 
 shouldLog :: Message -> Bool
-shouldLog m = (isUserPrefix $ prefix m) && (not $ isEmpty (trailing m)) &&(not $ or (map lFilter logFilter))
+shouldLog m = (isUserPrefix $ prefix m) && (not $ isEmpty (trailing m)) && (not $ or (map lFilter logFilter))
     where
         lFilter = flip isInfixOf (trailing m)
+        isEmpty s = (null s) || (and $ map isSpace s)
 
 logLine :: Message -> IO ()
 logLine m
