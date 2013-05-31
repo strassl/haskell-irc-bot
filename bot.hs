@@ -29,8 +29,9 @@ type Net = ReaderT Bot IO
 
 server = "irc.freenode.org"
 port = 6667
-chan = "#hbot-test"
+chan = "#reddit"
 nickname = "hbotty"
+password = "password"
 
 operatorsFile = "operators.txt"
 
@@ -54,6 +55,7 @@ disconnect = hClose . socket
 
 run :: Net ()
 run = do
+    write (cmdPass password)
     write (cmdNick nickname)
     write (cmdUser nickname)
     write (cmdJoin chan)
@@ -144,6 +146,8 @@ parseCommand m = parseArgs arguments
         parseArgs (x:xs) = Command x xs
 
 -- Common IRC commands
+
+cmdPass p = Message "" "PASS" [p] ""
 
 cmdNick n = Message "" "NICK" [n] ""
 
