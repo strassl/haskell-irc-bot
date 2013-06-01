@@ -8,13 +8,16 @@ import Control.Exception
 import qualified Data.ByteString as B
 import Data.Char
 import Data.List
+import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as PQ
 import Network
-import System.IO
 import System.Exit
+import System.IO
+import System.Random
 import Text.Printf
 
 import IRC
+import Markov (createText)
 
 data Command = Command { action :: String
                        , args   :: [String]
@@ -22,14 +25,14 @@ data Command = Command { action :: String
 
 data Bot = Bot { socket :: Handle 
                , operators :: [String]
-               , db :: PQ.Connection
+               , connection :: PQ.Connection
                }
 
 type Net = ReaderT Bot IO
 
 server = "irc.freenode.org"
 port = 6667
-chan = "#reddit"
+chan = "#hbot-test"
 nickname = "hbotty"
 password = "password"
 
@@ -147,6 +150,7 @@ processBotCommand :: Message -> Net ()
 processBotCommand m
     | act == "SAY" = write (cmdMsg chan (intercalate " " (args c)))
     | act == "QUIT" = write (cmdQuit "Going down!")
+    | act == "CHAIN" = processMarkov c
     | otherwise = write (Message "" "PRIVMSG" [chan] ("I'm sorry, " ++ name ++ ". I'm afraid I can't do that."))
     where
         name = maybe "" nick (parseUser (prefix m))
@@ -162,6 +166,18 @@ parseCommand m = parseArgs arguments
         parseArgs [] = Command "" []
         parseArgs [x] = Command x []
         parseArgs (x:xs) = Command x xs
+
+processMarkov :: Command -> Net ()
+processMarkov c = do
+    db <- asks connection 
+    txt <- liftIO $ createText db start num
+
+    write $ cmdMsg chan (T.unpack (T.replace "\n" "" txt))
+
+    where
+        a = args c
+        start = T.pack (a !! 0)
+        num = read (a !! 1) :: Int
 
 -- Common IRC commands
 
