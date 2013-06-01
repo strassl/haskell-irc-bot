@@ -1,7 +1,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Markov (parse) where
+module Markov (parse, createText, produce, insertChain) where
 
 import Control.Applicative
 import Data.Char
