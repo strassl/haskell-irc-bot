@@ -42,6 +42,10 @@ data Row = Row { id :: Integer
 instance PQ.FromRow Row where
     fromRow = Row <$> field <*> field <*> field <*> field
 
+createText c w i = do
+    l <- produce c w
+    return $ T.intercalate " " (take i l)
+
 produce :: PQ.Connection -> Word -> IO [Word]
 produce c w = unsafeInterleaveIO $ do
     nw <- nextWord c w
