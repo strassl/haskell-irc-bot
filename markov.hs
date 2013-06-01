@@ -8,6 +8,7 @@ import Data.Char
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as PQ
 import Database.PostgreSQL.Simple.FromRow
+import System.IO.Unsafe (unsafeInterleaveIO)
 
 type Chain = [Edge]
 type Edge = (Word, Word)
@@ -15,7 +16,7 @@ type Word = T.Text
 
 -- Pure parsing
 
-parse :: Text -> Chain
+parse :: T.Text -> Chain
 parse s = chain list
     where
         list = tokenize s
@@ -24,7 +25,7 @@ chain :: [Word] -> Chain
 chain [word, last] = [(word, last)]
 chain (x:xs) = (x, head xs) : (chain xs)
 
-tokenize :: Text -> [Word]
+tokenize :: T.Text -> [Word]
 tokenize = (T.split isSpaceNoCrLf) . (T.replace "\n" " \n ")
 
 isSpaceNoCrLf :: Char -> Bool
@@ -33,13 +34,27 @@ isSpaceNoCrLf c = c `elem`  " \t\f\v\xa0"
 -- Impure database stuff
 
 data Row = Row { id :: Integer
-               , word :: String
-               , nextword :: String
+               , word :: Word
+               , nextword :: Word
                , count :: Integer
                } deriving (Show)
 
 instance PQ.FromRow Row where
     fromRow = Row <$> field <*> field <*> field <*> field
+
+produce :: PQ.Connection -> Word -> IO [Word]
+produce c w = unsafeInterleaveIO $ do
+    nw <- nextWord c w
+    l <- produce c nw
+    return (w:l)
+
+nextWord :: PQ.Connection -> Word -> IO Word
+nextWord c w = do
+    xs :: [Row] <- PQ.query c "SELECT * FROM markov WHERE word=? ORDER BY RANDOM() LIMIT 1" [w]
+    fallback :: [Row] <- PQ.query c "SELECT * FROM markov ORDER BY RANDOM() LIMIT 1" ()
+    if (length xs) > 0
+        then return $ nextword $ head xs
+        else return $ nextword $ head fallback
 
 insertChain :: PQ.Connection -> Chain -> IO ()
 insertChain c chain = sequence_ $ map (insertEdge c) chain
