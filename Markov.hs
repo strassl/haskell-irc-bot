@@ -36,11 +36,10 @@ isSpaceNoCrLf c = c `elem`  " \t\f\v\xa0"
 data Row = Row { id :: Integer
                , word :: Word
                , nextword :: Word
-               , count :: Integer
                } deriving (Show)
 
 instance PQ.FromRow Row where
-    fromRow = Row <$> field <*> field <*> field <*> field
+    fromRow = Row <$> field <*> field <*> field 
 
 createText c w i = do
     l <- produce c w
@@ -64,22 +63,17 @@ insertChain :: PQ.Connection -> Chain -> IO ()
 insertChain c chain = sequence_ $ map (insertEdge c) chain
 
 insertEdge :: PQ.Connection -> Edge -> IO ()
-insertEdge c e = do
-    oldCount <- getStoredCount c e
-    if oldCount > 0
-        then PQ.execute c "UPDATE markov SET count = count + 1 WHERE word = ? and nextword = ?" e
-        else PQ.execute c "INSERT INTO markov (word, nextword, count) VALUES (?,?,?)" (fst e, snd e, 1 :: Integer)
+insertEdge c e = do 
+    PQ.execute c "INSERT INTO markov (word, nextword) VALUES (?,?)" (fst e, snd e)
     return ()
 
 getEdges :: PQ.Connection -> Word -> IO [Row]
 getEdges c w = PQ.query c "SELECT * FROM markov WHERE word = ?" [w]
 
-getStoredCount :: PQ.Connection -> Edge -> IO Integer
-getStoredCount c e = do
-    dbEdge <- getEdge c e
-    return $ maybe 0 count dbEdge
+getEdge :: PQ.Connection -> Edge -> IO [Row]
+getEdge c e = PQ.query c "SELECT * FROM markov WHERE word = ? AND nextword = ?" (fst e, snd e)
 
-getEdge :: PQ.Connection -> Edge -> IO (Maybe Row)
-getEdge c e = do 
-    xs :: [Row] <- PQ.query c "SELECT * FROM markov WHERE word = ? and nextword = ?" e
-    return $ if (length xs) > 0 then Just $ head xs else Nothing
+getStoredCount :: PQ.Connection -> Edge -> IO Int
+getStoredCount c e = do
+    rows <- getEdge c e
+    return $ length rows
