@@ -1,0 +1,7 @@
+{    
+    "server" : "example.com",
+    "port" : 6667,
+    "chan" : "#example",
+    "nickname" : "nick",
+    "password" : "password"
+}

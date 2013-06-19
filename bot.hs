@@ -1,15 +1,21 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveGeneric #-}
 
 import Control.Arrow
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Reader
 import Control.Exception
+import Data.Aeson
 import qualified Data.ByteString as B
+import qualified Data.ByteString.Lazy as BL
 import Data.Char
+import Data.Data
 import Data.List
+import Data.Maybe
 import qualified Data.Text as T
 import qualified Database.PostgreSQL.Simple as PQ
+import GHC.Generics
 import Network
 import System.Exit
 import System.IO
@@ -28,7 +34,9 @@ data Config = Config { server   :: String
                      , chan     :: String
                      , nickname :: String
                      , password :: String
-                     } deriving Show
+                     } deriving (Show, Generic)
+
+instance FromJSON Config
 
 data Bot = Bot { socket :: Handle 
                , config :: Config
@@ -38,7 +46,8 @@ data Bot = Bot { socket :: Handle
 
 type Net = ReaderT Bot IO
 
-operatorsFile = "operators.txt"
+operatorsPath = "operators.txt"
+configPath = "config.json"
 
 -- bracket <before> <after> <in between>
 main = bracket connect disconnect loop
@@ -49,7 +58,8 @@ main = bracket connect disconnect loop
 
 connect :: IO Bot
 connect = do 
-    let conf = Config "irc.freenode.org" 6667 "#reddit" "hbotty" "password"
+    confFile <- BL.readFile configPath
+    let conf = fromJust $ (decode confFile :: Maybe Config)
     ops <- getOperators
     h <- connectTo (server conf) (PortNumber (fromIntegral (port conf)))
     c <- connectDB
@@ -117,7 +127,7 @@ connectDB = PQ.connect info
 
 getOperators :: IO [String]
 getOperators = do
-    f <- readFile operatorsFile
+    f <- readFile operatorsPath
     return $ parseOperators f
 
 parseOperators :: String -> [String]
